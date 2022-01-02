@@ -13,7 +13,7 @@ Then follow the on-screen instructions.
 #Screenshots
 
 clinfo
-https://github.com/sukhmeetbawa/OpenCL-AMD/blob/master/clinfo.png
+![alt text](https://github.com/sukhmeetbawa/OpenCL-AMD/blob/master/clinfo.png)
 
-blender
-https://github.com/sukhmeetbawa/OpenCL-AMD/blob/master/blender.png
+blender 2.93 LTS
+![alt text](https://github.com/sukhmeetbawa/OpenCL-AMD/blob/master/blender.png)
