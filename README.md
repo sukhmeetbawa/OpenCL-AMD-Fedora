@@ -7,6 +7,7 @@ Similiar to https://aur.archlinux.org/packages/opencl-amd/
 1. `https://github.com/paranoid-bot/OpenCL-AMD-Fedora.git`
 2. `cd ./OpenCL-AMD-Fedora`
 3. `./opencl-amd.sh`
+
 Then follow the on-screen instructions.
 
 ## Screenshots
