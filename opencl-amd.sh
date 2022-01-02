@@ -21,11 +21,12 @@ installOpenCL()
     if  [ "$(dnf list installed | grep rpm-build.$(arch) | wc -l)" == 0 ]; then
         dnf install rpm-build -y
         remove=1
+        echo remove
     fi
     rpmbuild -bb ./amdgpu-core-shim.spec --define "_rpmdir $(pwd)"
     dnf install $(pwd)/$(arch)/amdgpu-core-shim*.rpm -y
     dnf install rocm-opencl-runtime libdrm-amdgpu -y
-    if  [ remove == 1 ]; then
+    if  [ "$remove" == 1 ]; then
         dnf remove rpm-build -y
     fi
 }
