@@ -13,7 +13,6 @@ installOpenCL()
 {
     dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/amdgpu-install-21.40.40500-1.noarch.rpm -y
     sed -i 's/$amdgpudistro/8.5/g' /etc/yum.repos.d/amdgpu*.repo
-    dnf update
     if  [ "$(dnf list installed | grep mesa-libOpenCL | wc -l)" == 1 ]; then
         echo "Removing Mesa OpenCL"
         dnf remove mesa-libOpenCL -y
