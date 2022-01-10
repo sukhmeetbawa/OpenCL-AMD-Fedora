@@ -38,8 +38,9 @@ installLatestOpenCL()
 
 installLegacyOpenCL()
 {
-	buildWorkaround
-	if [ "$(ls $(pwd) | grep *amdgpu-pro-21.30*.xz | wc -l)" == 1 ]; then
+	if [ "$(ls $(pwd) | grep *amdgpu-pro-21.30*.tar.xz | wc -l)" == 1 ] 
+	then
+		buildWorkaround
 		tar -xvf $(pwd)/*amdgpu-pro-21.30*.xz
 		mkdir -p /var/local/amdgpu
 		cp -r $(pwd)/amdgpu-pro-21.30-*-rhel-8.4/* /var/local/amdgpu/
