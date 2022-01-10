@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 set -e
 
 rootCheck()
@@ -9,7 +9,21 @@ rootCheck()
     fi
 }
 
-installOpenCL()
+buildWorkaround()
+{
+	if  [ "$(dnf list installed | grep rpm-build.$(arch) | wc -l)" == 0 ]; then
+        dnf install rpm-build -y
+        remove=1
+        echo remove
+    fi
+    rpmbuild -bb ./amdgpu-core-shim.spec --define "_rpmdir $(pwd)"
+    if  [ "$remove" == 1 ]; then
+        dnf remove rpm-build -y
+    fi
+    dnf install $(pwd)/$(arch)/amdgpu-core-shim*.rpm -y
+}
+
+installLatestOpenCL()
 {
     dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/amdgpu-install-21.40.40500-1.noarch.rpm -y
     sed -i 's/$amdgpudistro/8.5/g' /etc/yum.repos.d/amdgpu*.repo
@@ -17,37 +31,78 @@ installOpenCL()
         echo "Removing Mesa OpenCL"
         dnf remove mesa-libOpenCL -y
     fi
-    if  [ "$(dnf list installed | grep rpm-build.$(arch) | wc -l)" == 0 ]; then
-        dnf install rpm-build -y
-        remove=1
-        echo remove
-    fi
-    rpmbuild -bb ./amdgpu-core-shim.spec --define "_rpmdir $(pwd)"
-    dnf install $(pwd)/$(arch)/amdgpu-core-shim*.rpm -y
+    buildWorkaround
     dnf install ocl-icd rocm-opencl-runtime libdrm-amdgpu -y
-    if  [ "$remove" == 1 ]; then
-        dnf remove rpm-build -y
-    fi
+    
+}
+
+installLegacyOpenCL()
+{
+	buildWorkaround
+	if [ "$(ls $(pwd) | grep *amdgpu-pro-21.30*.xz | wc -l)" == 1 ]; then
+		tar -xvf $(pwd)/*amdgpu-pro-21.30*.xz
+		mkdir -p /var/local/amdgpu
+		cp -r $(pwd)/amdgpu-pro-21.30-*-rhel-8.4/* /var/local/amdgpu/
+		rm -f /etc/yum.repos.d/amdgpu.repo
+		cat > /etc/yum.repos.d/amdgpu.repo << EOF
+[amdgpu]
+name=AMDGPU Packages
+baseurl=file:///var/local/amdgpu/
+enabled=1
+skip_if_unavailable=1
+gpgcheck=0
+cost=500
+metadata_expire=300
+EOF
+		dnf install opencl-rocr-amdgpu-pro -y
+		echo "Installation Successful"
+	else
+		echo "Please Download https://drivers.amd.com/drivers/linux/amdgpu-pro-21.30-1290604-rhel-8.4.tar.xz from this link https://www.amd.com/en/support/kb/release-notes/rn-amdgpu-unified-linux-21-30 and place it in the Parent Directory of this Script"
+		exit
+	fi
+}
+
+yesno()
+{
+	echo "A local repo will setup"
+	while true; do
+    	read -p "Do you wish to continue? [y/n]: " yn
+	    case $yn in
+    	    [Yy]* ) installLegacyOpenCL; break;;
+    	    [Nn]* ) exit;;
+    	    * ) echo "Please answer y or n";;
+    	esac
+	done
 }
 
 uninstallOpenCL()
 {
-    dnf remove rocm-opencl-runtime libdrm-amdgpu amdgpu-core-shim -y
+    dnf remove rocm-opencl-runtime libdrm-amdgpu amdgpu-core-shim opencl-rocr-amdgpu-pro -y
     dnf remove amdgpu-install -y
+    rm -rf /var/local/amdgpu
+    rm -rf /etc/yum.repo.d/amdgpu*
+    rm -rf /etc/yum.repo.d/rocm
 }
 
 menu()
 {
+	echo "Legacy Drivers are are required for Arctic Islands/Polaris"
+	echo "Latest Drivers work with Vega and Above"
     PS3='Enter Option Number: '
-    options=("Install" "Uninstall" "Quit")
+    options=("Install-Latest" "Install-Legacy" "Uninstall" "Quit")
     select opt in "${options[@]}"
     do
         case $opt in
-            "Install")
-                echo "Installing OpenCL Stack"
-                installOpenCL
+            "Install-Latest")
+                echo "Installing Latest OpenCL Stack"
+                installLatestOpenCL
                 echo "Install Successful"
                 break
+                ;;
+             "Install-Legacy")
+             	echo "Installing Legacy OpenCL Stack"
+             	yesno
+             	break
                 ;;
             "Uninstall")
                 echo "Uninstalling OpenCL Stack"
@@ -58,7 +113,7 @@ menu()
             "Quit")
                 break
                 ;;
-            *) echo "invalid option $REPLY";;
+            *) echo "Invalid Option $REPLY";;
         esac
     done
 
