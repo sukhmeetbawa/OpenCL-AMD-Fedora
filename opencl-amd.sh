@@ -11,37 +11,48 @@ rootCheck()
 
 buildWorkaround()
 {
+	echo "Checking for Build Dependencies"
 	if  [ "$(dnf list installed | grep rpm-build.$(arch) | wc -l)" == 0 ]; then
-        dnf install rpm-build -y
+		echo "Installing Build Dependencies"
+        dnf install rpm-build -y 1> /dev/null
         remove=1
-        echo remove
     fi
-    rpmbuild -bb ./amdgpu-core-shim.spec --define "_rpmdir $(pwd)"
+    echo "Building Workaround Package"
+    rpmbuild -bb ./amdgpu-core-shim.spec --define "_rpmdir $(pwd)" &> /dev/null
     if  [ "$remove" == 1 ]; then
-        dnf remove rpm-build -y
+    	echo "Removing Unneeded Packages"
+        dnf remove rpm-build -y 1> /dev/null
     fi
-    dnf install $(pwd)/$(arch)/amdgpu-core-shim*.rpm -y
+    echo "Installing Workaround Package"
+    dnf install $(pwd)/$(arch)/amdgpu-core-shim*.rpm -y 1> /dev/null
 }
 
 installLatestOpenCL()
 {
-    dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/amdgpu-install-21.40.40500-1.noarch.rpm -y
+	echo "Installing amdgpu-install"
+    dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/amdgpu-install-21.40.40500-1.noarch.rpm -y 1> /dev/null
+    echo "Fixing Repositories"
     sed -i 's/$amdgpudistro/8.5/g' /etc/yum.repos.d/amdgpu*.repo
+    sed -i 's/21.40/latest/g' /etc/yum.repos.d/amdgpu*.repo
+    sed -i 's/4.5/rpm/g' /etc/yum.repos.d/rocm.repo
+    sed -i '2s/rpm/Latest/g' /etc/yum.repos.d/rocm.repo
     if  [ "$(dnf list installed | grep mesa-libOpenCL | wc -l)" == 1 ]; then
         echo "Removing Mesa OpenCL"
-        dnf remove mesa-libOpenCL -y
+        dnf remove mesa-libOpenCL -y 1> /dev/null
     fi
     buildWorkaround
-    dnf install ocl-icd rocm-opencl-runtime libdrm-amdgpu -y
-    
+    echo "Installing OpenCL Runtime"
+    dnf install ocl-icd rocm-opencl-runtime libdrm-amdgpu -y 1> /dev/null
 }
 
 installLegacyOpenCL()
 {
-	if [ "$(ls $(pwd) | grep *amdgpu-pro-21.30*.tar.xz | wc -l)" == 1 ] 
+	if [ "$(ls $(pwd) | grep *amdgpu-pro-21.30*.tar.xz | wc -l)" == 1 ]
 	then
 		buildWorkaround
-		tar -xvf $(pwd)/*amdgpu-pro-21.30*.xz
+		echo "Extracting Files"
+		tar -xvf $(pwd)/*amdgpu-pro-21.30*.xz 1> /dev/null
+		echo "Setting up Local Repository"
 		mkdir -p /var/local/amdgpu
 		cp -r $(pwd)/amdgpu-pro-21.30-*-rhel-8.4/* /var/local/amdgpu/
 		rm -f /etc/yum.repos.d/amdgpu.repo
@@ -55,7 +66,8 @@ gpgcheck=0
 cost=500
 metadata_expire=300
 EOF
-		dnf install opencl-rocr-amdgpu-pro -y
+		echo "Installing OpenCL"
+		dnf install opencl-rocr-amdgpu-pro -y 1> /dev/null
 		echo "Installation Successful"
 	else
 		echo "Please Download https://drivers.amd.com/drivers/linux/amdgpu-pro-21.30-1290604-rhel-8.4.tar.xz from this link https://www.amd.com/en/support/kb/release-notes/rn-amdgpu-unified-linux-21-30 and place it in the Parent Directory of this Script"
@@ -65,7 +77,7 @@ EOF
 
 yesno()
 {
-	echo "A local repo will setup"
+	echo "A local repository will setup"
 	while true; do
     	read -p "Do you wish to continue? [y/n]: " yn
 	    case $yn in
@@ -78,11 +90,16 @@ yesno()
 
 uninstallOpenCL()
 {
-    dnf remove rocm-opencl-runtime libdrm-amdgpu amdgpu-core-shim opencl-rocr-amdgpu-pro -y
-    dnf remove amdgpu-install -y
-    rm -rf /var/local/amdgpu
-    rm -rf /etc/yum.repo.d/amdgpu*
-    rm -rf /etc/yum.repo.d/rocm
+	echo "Uninstalling Packages"
+    dnf remove rocm-opencl-runtime libdrm-amdgpu amdgpu-core-shim opencl-rocr-amdgpu-pro amdgpu-install -y 1> /dev/null
+	echo "Checking for Local Repository"
+    if [ "$(ls /var/local/ | grep amdgpu | wc -l)" == 1 ]; then
+    	echo "Removing Local Repository"
+	    rm -rf /var/local/amdgpu
+	fi
+	if [ "$(ls /etc/yum.repos.d/ | grep amdgpu.repo | wc -l)" > 0 ]; then
+		sudo rm -rf /etc/yum.repos.d/amdgpu.repo
+	fi
 }
 
 menu()
