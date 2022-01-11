@@ -66,8 +66,11 @@ gpgcheck=0
 cost=500
 metadata_expire=300
 EOF
+		echo "Installing Another Workaround Package"
+		dnf copr enable rmnscnce/amdgpu-pro-shims -y &> /dev/null
+		dnf install amdgpu-pro-shims -y 1> /dev/null
 		echo "Installing OpenCL"
-		dnf install opencl-rocr-amdgpu-pro -y 1> /dev/null
+		dnf install opencl-rocr-amdgpu-pro rocm-device-libs-amdgpu-pro hsa-runtime-rocr-amdgpu hsakmt-roct-amdgpu hip-rocr-amdgpu-pro comgr-amdgpu-pro opencl-orca-amdgpu-pro-icd libdrm-amdgpu-common ocl-icd-amdgpu-pro opencl-rocr-amdgpu-pro amdgpu-pro-core -y 1> /dev/null
 		echo "Installation Successful"
 	else
 		echo "Please Download https://drivers.amd.com/drivers/linux/amdgpu-pro-21.30-1290604-rhel-8.4.tar.xz from this link https://www.amd.com/en/support/kb/release-notes/rn-amdgpu-unified-linux-21-30 and place it in the Parent Directory of this Script"
@@ -97,7 +100,7 @@ uninstallOpenCL()
     	echo "Removing Local Repository"
 	    rm -rf /var/local/amdgpu
 	fi
-	if [ "$(ls /etc/yum.repos.d/ | grep amdgpu.repo | wc -l)" > 0 ]; then
+	if [ "$(ls /etc/yum.repos.d/ | grep amdgpu.repo | wc -l)" -gt 0 ]; then
 		sudo rm -rf /etc/yum.repos.d/amdgpu.repo
 	fi
 }
