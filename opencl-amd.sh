@@ -94,7 +94,7 @@ yesno()
 uninstallOpenCL()
 {
 	echo "Uninstalling Packages"
-    dnf remove rocm-opencl-runtime libdrm-amdgpu amdgpu-core-shim opencl-rocr-amdgpu-pro amdgpu-install -y 1> /dev/null
+    dnf remove rocm-opencl-runtime libdrm-amdgpu amdgpu-core-shim amdgpu-install opencl-rocr-amdgpu-pro rocm-device-libs-amdgpu-pro hsa-runtime-rocr-amdgpu hsakmt-roct-amdgpu hip-rocr-amdgpu-pro comgr-amdgpu-pro opencl-orca-amdgpu-pro-icd libdrm-amdgpu-common ocl-icd-amdgpu-pro opencl-rocr-amdgpu-pro amdgpu-pro-core amdgpu-pro-shims -y 1> /dev/null
 	echo "Checking for Local Repository"
     if [ "$(ls /var/local/ | grep amdgpu | wc -l)" == 1 ]; then
     	echo "Removing Local Repository"
