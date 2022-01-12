@@ -34,8 +34,6 @@ installLatestOpenCL()
     echo "Fixing Repositories"
     sed -i 's/$amdgpudistro/8.5/g' /etc/yum.repos.d/amdgpu*.repo
     sed -i 's/21.40/latest/g' /etc/yum.repos.d/amdgpu*.repo
-    sed -i 's/4.5/rpm/g' /etc/yum.repos.d/rocm.repo
-    sed -i '2s/rpm/Latest/g' /etc/yum.repos.d/rocm.repo
     if  [ "$(dnf list installed | grep mesa-libOpenCL | wc -l)" == 1 ]; then
         echo "Removing Mesa OpenCL"
         dnf remove mesa-libOpenCL -y 1> /dev/null
