@@ -15,3 +15,13 @@ Screenshots that opencl is succesfully installed.
 ![alt text](./Screenshots/clinfo.png)
 ### Blender 2.93 LTS
 ![alt text](./Screenshots/blender.png)
+
+## Credits
+https://github.com/Koppajin
+
+https://www.reddit.com/r/Fedora/comments/m2il41/guide_installing_opencl_alongside_mesa_drivers/
+
+https://www.reddit.com/r/Fedora/comments/nprppu/guide_workaround_to_install_amdgpupro_opencl/
+
+https://github.com/GloriousEggroll/rpm-amdgpu-pro-opencl
+
