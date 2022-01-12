@@ -47,8 +47,8 @@ installLatestOpenCL()
 
 installLegacyOpenCL()
 {
-	if [ "$(ls $(pwd) | grep *amdgpu-pro-21.30*.tar.xz | wc -l)" == 1 ]
-	then
+		echo "Downloading Neccessary Files"
+		wget -q --show-progress --referer=https://www.amd.com/en/support/kb/release-notes/rn-amdgpu-unified-linux-21-30 https://drivers.amd.com/drivers/linux/amdgpu-pro-21.30-1290604-rhel-8.4.tar.xz
 		buildWorkaround
 		echo "Extracting Files"
 		tar -xvf $(pwd)/*amdgpu-pro-21.30*.xz 1> /dev/null
@@ -72,10 +72,6 @@ EOF
 		echo "Installing OpenCL"
 		dnf install opencl-rocr-amdgpu-pro rocm-device-libs-amdgpu-pro hsa-runtime-rocr-amdgpu hsakmt-roct-amdgpu hip-rocr-amdgpu-pro comgr-amdgpu-pro opencl-orca-amdgpu-pro-icd libdrm-amdgpu-common ocl-icd-amdgpu-pro opencl-rocr-amdgpu-pro amdgpu-pro-core -y 1> /dev/null
 		echo "Installation Successful"
-	else
-		echo "Please Download https://drivers.amd.com/drivers/linux/amdgpu-pro-21.30-1290604-rhel-8.4.tar.xz from this link https://www.amd.com/en/support/kb/release-notes/rn-amdgpu-unified-linux-21-30 and place it in the Parent Directory of this Script"
-		exit
-	fi
 }
 
 yesno()
