@@ -29,7 +29,7 @@ buildWorkaround()
 
 installLatestOpenCL()
 {
-    RPM=$(curl http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/ | grep rpm | awk 'BEGIN{FS=">"} {print $2}' | awk 'BEGIN{FS="<"} {print $1}')
+    RPM=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/ | grep rpm | awk 'BEGIN{FS=">"} {print $2}' | awk 'BEGIN{FS="<"} {print $1}')
     echo "Installing amdgpu-install"
     dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/${RPM} -y 1> /dev/null
     echo "Fixing Repositories"
