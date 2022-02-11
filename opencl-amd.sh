@@ -30,7 +30,7 @@ buildWorkaround()
 installLatestOpenCL()
 {
 	echo "Installing amdgpu-install"
-    dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/amdgpu-install-21.40.40500-1.noarch.rpm -y 1> /dev/null
+    dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/amdgpu-install-21.50.50000-1.el8.noarch.rpm -y 1> /dev/null
     echo "Fixing Repositories"
     sed -i 's/$amdgpudistro/8.5/g' /etc/yum.repos.d/amdgpu*.repo
     sed -i 's/21.40/latest/g' /etc/yum.repos.d/amdgpu*.repo
