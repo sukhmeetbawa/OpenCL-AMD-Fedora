@@ -11,20 +11,8 @@ rootCheck()
 
 buildWorkaround()
 {
-	echo "Checking for Build Dependencies"
-	if  [ "$(dnf list installed | grep rpm-build.$(arch) | wc -l)" == 0 ]; then
-		echo "Installing Build Dependencies"
-        dnf install rpm-build -y 1> /dev/null
-        remove=1
-    fi
-    echo "Building Workaround Package"
-    rpmbuild -bb ./amdgpu-core-shim.spec --define "_rpmdir $(pwd)" &> /dev/null
-    if  [ "$remove" == 1 ]; then
-    	echo "Removing Unneeded Packages"
-        dnf remove rpm-build -y 1> /dev/null
-    fi
-    echo "Installing Workaround Package"
-    dnf install $(pwd)/$(arch)/amdgpu-core-shim*.rpm -y 1> /dev/null
+    dnf copr enable sukhmeet/amdgpu-core-shim -y &> /dev/null
+    dnf install amdgpu-core-shim -y 1> /dev/null
 }
 
 installLatestOpenCL()
