@@ -9,25 +9,28 @@ rootCheck()
     fi
 }
 
-buildWorkaround()
+installLatestRepo()
 {
-    dnf copr enable sukhmeet/amdgpu-core-shim -y &> /dev/null
-    dnf install amdgpu-core-shim -y 1> /dev/null
+    if [ $(ls -l /etc/yum.repos.d/ | grep amdgpu.repo | wc -l) == 0 ]; then
+        RPM=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/ | grep rpm | awk 'BEGIN{FS=">"} {print $2}' | awk 'BEGIN{FS="<"} {print $1}')
+        echo "Installing amdgpu-install"
+        dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/${RPM} -y 1> /dev/null
+        echo "Fixing Repositories"
+        sed -i 's/$amdgpudistro/8.5/g' /etc/yum.repos.d/amdgpu*.repo
+        sed -i 's/21.40/latest/g' /etc/yum.repos.d/amdgpu*.repo
+    fi
 }
 
 installLatestOpenCL()
 {
-    RPM=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/ | grep rpm | awk 'BEGIN{FS=">"} {print $2}' | awk 'BEGIN{FS="<"} {print $1}')
-    echo "Installing amdgpu-install"
-    dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/${RPM} -y 1> /dev/null
-    echo "Fixing Repositories"
-    sed -i 's/$amdgpudistro/8.5/g' /etc/yum.repos.d/amdgpu*.repo
-    sed -i 's/21.40/latest/g' /etc/yum.repos.d/amdgpu*.repo
+    installLatestRepo
     if  [ "$(dnf list installed | grep mesa-libOpenCL | wc -l)" == 1 ]; then
         echo "Removing Mesa OpenCL"
         dnf remove mesa-libOpenCL -y 1> /dev/null
     fi
-    buildWorkaround
+    echo "Installing Workaroud Package"
+    dnf copr enable sukhmeet/amdgpu-core-shim -y &> /dev/null
+    dnf install amdgpu-core-shim -y 1> /dev/null
     echo "Installing OpenCL Runtime"
     dnf install ocl-icd rocm-opencl-runtime libdrm-amdgpu -y 1> /dev/null
 }
@@ -59,6 +62,14 @@ EOF
 		echo "Installing OpenCL"
 		dnf install opencl-rocr-amdgpu-pro rocm-device-libs-amdgpu-pro hsa-runtime-rocr-amdgpu hsakmt-roct-amdgpu hip-rocr-amdgpu-pro comgr-amdgpu-pro opencl-orca-amdgpu-pro-icd libdrm-amdgpu-common ocl-icd-amdgpu-pro opencl-rocr-amdgpu-pro amdgpu-pro-core -y 1> /dev/null
 		echo "Installation Successful"
+}
+
+installLatestHIP(){
+    installLatestRepo
+    dnf copr enable sukhmeet/amdgpu-core-shim -y &> /dev/null
+    dnf install platform-python-shim -y 1> /dev/null
+    echo "Installing HIP Runtime"
+    sudo dnf install rocm-hip-runtime -y 1> /dev/null
 }
 
 yesno()
@@ -93,20 +104,25 @@ menu()
 	echo "Legacy Drivers are are required for Arctic Islands/Polaris"
 	echo "Latest Drivers work with Vega and Above"
     PS3='Enter Option Number: '
-    options=("Install-Latest" "Install-Legacy" "Uninstall" "Quit")
+    options=("Install-OpenCL-Latest" "Install-OpenCL-Legacy" "Install-HIP-Latest" "Uninstall" "Quit")
     select opt in "${options[@]}"
     do
         case $opt in
-            "Install-Latest")
+            "Install-OpenCL-Latest")
                 echo "Installing Latest OpenCL Stack"
                 installLatestOpenCL
                 echo "Install Successful"
                 break
                 ;;
-             "Install-Legacy")
+             "Install-OpenCL-Legacy")
              	echo "Installing Legacy OpenCL Stack"
              	yesno
              	break
+                ;;
+            "Install-HIP-Latest")
+                echo "(WIP) For Testing Purposes"
+                installLatestHIP
+                break
                 ;;
             "Uninstall")
                 echo "Uninstalling OpenCL Stack"

@@ -4,11 +4,15 @@ OpenCL userspace driver as provided in the amdgpu-pro driver stack. This package
 Similiar to https://aur.archlinux.org/packages/opencl-amd/
 
 ## Usage
-1. `git clone https://github.com/sukhmeetbawa/OpenCL-AMD-Fedora.git`
-2. `cd ./OpenCL-AMD-Fedora`
-3. `./opencl-amd.sh`
+
+```
+git clone https://github.com/sukhmeetbawa/OpenCL-AMD-Fedora.git
+cd ./OpenCL-AMD-Fedora
+./opencl-amd.sh
+```
 
 ## Screenshots
+
 Screenshots that opencl is succesfully installed.
 
 ### clinfo
