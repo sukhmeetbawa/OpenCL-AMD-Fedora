@@ -27,6 +27,8 @@ installLatestRepo()
         echo "Fixing Repositories"
         sed -i 's/$amdgpudistro/'$LatestRHEL'/g' /etc/yum.repos.d/amdgpu*.repo
         sed -i 's/'$LatestDriverVersion'/latest/g' /etc/yum.repos.d/amdgpu*.repo
+        sed -i 's|rhel9/5.2|yum/latest|g' /etc/yum.repos.d/rocm.repo
+        sed -i 's/enabled=0/enable=1/g' /etc/yum.repos.d/rocm.repo
     fi
 }
 
@@ -41,7 +43,7 @@ installLatestOpenCL()
     dnf copr enable sukhmeet/amdgpu-core-shim -y &> /dev/null
     dnf install amdgpu-core-shim -y
     echo "Installing OpenCL Runtime"
-    dnf install ocl-icd rocm-opencl-runtime libdrm-amdgpu -y
+    dnf install rocm-opencl -y
 }
 
 installLegacyOpenCL()
@@ -99,7 +101,7 @@ yesno()
 uninstallOpenCL()
 {
 	echo "Uninstalling Packages"
-    dnf remove ocl-icd rocm-opencl-runtime libdrm-amdgpu amdgpu-core-shim amdgpu-install opencl-rocr-amdgpu-pro rocm-device-libs-amdgpu-pro hsa-runtime-rocr-amdgpu hsakmt-roct-amdgpu hip-rocr-amdgpu-pro comgr-amdgpu-pro opencl-orca-amdgpu-pro-icd libdrm-amdgpu-common ocl-icd-amdgpu-pro opencl-rocr-amdgpu-pro amdgpu-pro-core amdgpu-pro-shims rocm-hip-runtime -y
+    dnf remove rocm-opencl ocl-icd rocm-opencl-runtime libdrm-amdgpu amdgpu-core-shim amdgpu-install opencl-rocr-amdgpu-pro rocm-device-libs-amdgpu-pro hsa-runtime-rocr-amdgpu hsakmt-roct-amdgpu hip-rocr-amdgpu-pro comgr-amdgpu-pro opencl-orca-amdgpu-pro-icd libdrm-amdgpu-common ocl-icd-amdgpu-pro opencl-rocr-amdgpu-pro amdgpu-pro-core amdgpu-pro-shims rocm-hip-runtime -y
 	echo "Checking for Local Repository"
     if [ "$(ls /var/local/ | grep amdgpu | wc -l)" == 1 ]; then
     	echo "Removing Local Repository"
