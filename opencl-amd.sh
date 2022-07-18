@@ -9,15 +9,24 @@ rootCheck()
     fi
 }
 
+getVersions()
+{
+	#Check the repo for the latest version of the driver and save it as a variable
+	LatestDriverVersion=$(curl --silent http://repo.radeon.com/amdgpu-install/ | grep href | tail -2 | head -1 | sed 's/.*\/">//; s/\/<\/a.*//')
+	#Check the repo for the latest supported RHEL version and save it as a variable
+	LatestRHEL=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/ | grep href | tail -1 | sed 's/.*\/">//; s/\/<\/a.*//')
+}
+
 installLatestRepo()
 {
+    getVersions
     if [ $(ls -l /etc/yum.repos.d/ | grep -v rpmsave | grep amdgpu.repo | wc -l) == 0 ]; then
-        RPM=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/ | grep rpm | awk 'BEGIN{FS=">"} {print $2}' | awk 'BEGIN{FS="<"} {print $1}')
+        RPM=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/${LatestRHEL}/ | grep rpm | awk 'BEGIN{FS=">"} {print $2}' | awk 'BEGIN{FS="<"} {print $1}')
         echo "Installing amdgpu-install"
-        dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/8.5/${RPM} -y
+        dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/${LatestRHEL}/${RPM} -y
         echo "Fixing Repositories"
-        sed -i 's/$amdgpudistro/8.5/g' /etc/yum.repos.d/amdgpu*.repo
-        sed -i 's/21.40/latest/g' /etc/yum.repos.d/amdgpu*.repo
+        sed -i 's/$amdgpudistro/'$LatestRHEL'/g' /etc/yum.repos.d/amdgpu*.repo
+        sed -i 's/'$LatestDriverVersion'/latest/g' /etc/yum.repos.d/amdgpu*.repo
     fi
 }
 
@@ -37,9 +46,9 @@ installLatestOpenCL()
 
 installLegacyOpenCL()
 {
-		echo "Downloading Neccessary Files"
+		echo "Downloading Necessary Files"
 		wget -q --show-progress --referer=https://www.amd.com/en/support/kb/release-notes/rn-amdgpu-unified-linux-21-30 https://drivers.amd.com/drivers/linux/amdgpu-pro-21.30-1290604-rhel-8.4.tar.xz
-		echo "Installing Workaroud Package"
+		echo "Installing Workaround Package"
 		dnf copr enable sukhmeet/amdgpu-core-shim -y &> /dev/null
 		dnf install amdgpu-core-shim -y
 		echo "Extracting Files"
@@ -129,7 +138,7 @@ menu()
             "Uninstall")
                 echo "Uninstalling OpenCL Stack"
                 uninstallOpenCL
-                echo "Uninstall Successfull"
+                echo "Uninstall Successful"
                 break
                 ;;
             "Quit")
