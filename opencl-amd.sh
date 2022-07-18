@@ -37,9 +37,9 @@ installLatestOpenCL()
 
 installLegacyOpenCL()
 {
-		echo "Downloading Neccessary Files"
+		echo "Downloading Necessary Files"
 		wget -q --show-progress --referer=https://www.amd.com/en/support/kb/release-notes/rn-amdgpu-unified-linux-21-30 https://drivers.amd.com/drivers/linux/amdgpu-pro-21.30-1290604-rhel-8.4.tar.xz
-		echo "Installing Workaroud Package"
+		echo "Installing Workaround Package"
 		dnf copr enable sukhmeet/amdgpu-core-shim -y &> /dev/null
 		dnf install amdgpu-core-shim -y
 		echo "Extracting Files"
@@ -129,7 +129,7 @@ menu()
             "Uninstall")
                 echo "Uninstalling OpenCL Stack"
                 uninstallOpenCL
-                echo "Uninstall Successfull"
+                echo "Uninstall Successful"
                 break
                 ;;
             "Quit")
