@@ -12,23 +12,26 @@ rootCheck()
 getVersions()
 {
 	#Check the repo for the latest version of the driver and save it as a variable
-	LatestDriverVersion=$(curl --silent http://repo.radeon.com/amdgpu-install/ | grep href | tail -2 | head -1 | sed 's/.*\/">//; s/\/<\/a.*//')
+	latestDriverVersion=$(curl --silent http://repo.radeon.com/amdgpu-install/ | grep href | tail -2 | head -1 | sed 's/.*\/">//; s/\/<\/a.*//')
 	#Check the repo for the latest supported RHEL version and save it as a variable
-	LatestRHEL=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/ | grep href | tail -1 | sed 's/.*\/">//; s/\/<\/a.*//')
+	latestRHEL=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/ | grep href | tail -1 | sed 's/.*\/">//; s/\/<\/a.*//')
 }
 
 installLatestRepo()
 {
     getVersions
     if [ $(ls -l /etc/yum.repos.d/ | grep -v rpmsave | grep amdgpu.repo | wc -l) == 0 ]; then
-        RPM=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/${LatestRHEL}/ | grep rpm | awk 'BEGIN{FS=">"} {print $2}' | awk 'BEGIN{FS="<"} {print $1}')
+        RPM=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/${latestRHEL}/ | grep rpm | awk 'BEGIN{FS=">"} {print $2}' | awk 'BEGIN{FS="<"} {print $1}')
         echo "Installing amdgpu-install"
-        dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/${LatestRHEL}/${RPM} -y
+        dnf install http://repo.radeon.com/amdgpu-install/latest/rhel/${latestRHEL}/${RPM} -y
         echo "Fixing Repositories"
-        sed -i 's/$amdgpudistro/'$LatestRHEL'/g' /etc/yum.repos.d/amdgpu*.repo
-        sed -i 's/'$LatestDriverVersion'/latest/g' /etc/yum.repos.d/amdgpu*.repo
-        sed -i 's|rhel9/5.2|yum/latest|g' /etc/yum.repos.d/rocm.repo
-        sed -i 's/enabled=0/enable=1/g' /etc/yum.repos.d/rocm.repo
+        sed -i 's/$amdgpudistro/'$latestRHEL'/g' /etc/yum.repos.d/amdgpu*.repo
+        sed -i 's/'$latestDriverVersion'/latest/g' /etc/yum.repos.d/amdgpu*.repo
+        #This regEx will execute first. The order of operations between this expression and the one below it is important because I don't know without looking at the file it's editing if it will encounter a space or a newline. That's why both of these exist; I couldn't figure out how to do it all in one sed expression.
+	sed -i 's|rhel[0-9].*/*[ ]|yum/latest |g' /etc/yum.repos.d/rocm.repo
+        #If the above expression didn't match anything, this one will. If this one does match, that means there was no text afterwards (i.e. a new line scenario). Not sure of a cleaner way to do this unfortunately. Feel free to improve this.
+	sed -i 's|rhel[0-9].*/*|yum/latest|g' /etc/yum.repos.d/rocm.repo
+	sed -i 's/enabled=0/enable=1/g' /etc/yum.repos.d/rocm.repo
     fi
 }
 
