@@ -28,17 +28,13 @@ installLatestRepo()
         sed -i 's/$amdgpudistro/'$latestRHEL'/g' /etc/yum.repos.d/amdgpu*.repo
         sed -i 's/'$latestDriverVersion'/latest/g' /etc/yum.repos.d/amdgpu*.repo
 	
-        #The order of operations between this expression and the one below is 
+        #The order of operations between thess two expressions is 
 	#important because I don't know without looking at the file it's editing if it will encounter a space or a newline. 
 	#That's why both of these exist; I couldn't figure out how to do it all in one sed expression.
-	
-	sed -i 's|rhel[0-9].*/*[ ]|yum/latest |g' /etc/yum.repos.d/rocm.repo
-	
-        #If the above expression didn't match anything, this one will. 
-	#If this one does match, that means there was no text afterwards (i.e. a new line scenario). 
 	#Not sure of a cleaner way to do this unfortunately. Feel free to improve this.
-	
+	sed -i 's|rhel[0-9].*/*[ ]|yum/latest |g' /etc/yum.repos.d/rocm.repo
 	sed -i 's|rhel[0-9].*/*|yum/latest|g' /etc/yum.repos.d/rocm.repo
+	
 	sed -i 's/enabled=0/enable=1/g' /etc/yum.repos.d/rocm.repo
     fi
 }
