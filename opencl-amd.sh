@@ -9,17 +9,133 @@ rootCheck()
     fi
 }
 
-getVersions()
+getRHEL()
+{
+	#Check the repo for the latest supported RHEL version and save it as a variable
+	echo $(curl http://repo.radeon.com/amdgpu-install/latest/rhel/ | grep href | tail -1 | sed 's/.*\/">//; s/\/<\/a.*//')
+}
+
+getDriver()
 {
 	#Check the repo for the latest version of the driver and save it as a variable
-	latestDriverVersion=$(curl --silent http://repo.radeon.com/amdgpu-install/ | grep href | tail -2 | head -1 | sed 's/.*\/">//; s/\/<\/a.*//')
-	#Check the repo for the latest supported RHEL version and save it as a variable
-	latestRHEL=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/ | grep href | tail -1 | sed 's/.*\/">//; s/\/<\/a.*//')
+	echo $(curl http://repo.radeon.com/amdgpu-install/ | grep href | tail -2 | head -1 | sed 's/.*\/">//; s/\/<\/a.*//')
+
+}
+
+webScrape()
+{
+	latestRHEL="$(getRHEL)"
+	latestDriverVersion="$(getDriver)"
+	echo $(grep '<a href="'$1'-'$latestDriverVersion /tmp/amdDriverPageTMP | sed 's|.*">||; s|<\/a>.*||')
+}
+
+downloadWGET()
+{
+	latestRHEL="$(getRHEL)"
+	latestDriverVersion="$(getDriver)"
+	sudo wget -q -c -P /tmp --show-progress https://repo.radeon.com/amdgpu/latest/rhel/${latestRHEL}/proprietary/x86_64/$1
+}
+
+installPortableGL()
+{
+    latestRHEL="$(getRHEL)"
+    latestDriverVersion="$(getDriver)"
+    echo "Downloading Dependencies"
+    dnf install cpio
+    echo "Downloading Drivers"
+    curl --progress-bar http://repo.radeon.com/amdgpu/latest/rhel/${latestRHEL}/proprietary/x86_64/ > /tmp/amdDriverPageTMP
+    
+    libEGL=$(webScrape "libegl-amdgpu-pro")
+    libGL=$(webScrape "libgl-amdgpu-pro")
+    libGLDRI=$(webScrape "libgl-amdgpu-pro-dri")
+    libGLEXT=$(webScrape "libgl-amdgpu-pro-ext")
+    libGLAPI=$(webScrape "libglapi-amdgpu-pro")
+    libGLES=$(webScrape "libgles-amdgpu-pro")
+    
+    downloadWGET $libEGL
+    downloadWGET $libGL
+    downloadWGET $libGLDRI
+    downloadWGET $libGLEXT
+    downloadWGET $libGLAPI
+    downloadWGET $libGLES
+    
+    (cd /tmp && 
+    rpm2cpio $libEGL | cpio -idmv
+    rpm2cpio $libGL | cpio -idmv
+    rpm2cpio $libGLDRI | cpio -idmv
+    rpm2cpio $libGLEXT | cpio -idmv
+    rpm2cpio $libGLAPI | cpio -idmv
+    rpm2cpio $libGLES | cpio -idmv)
+    
+    rm -f /tmp/$libEGL /tmp/$libGL /tmp/$libGLDRI /tmp/$libGLEXT /tmp/$libGLAPI /tmp/$libGLES /tmp/amdDriverPageTMP
+    
+    mkdir -p /home/$SUDO_USER/.amdgpu-progl-portable
+    chmod -R 777 /home/$SUDO_USER/.amdgpu-progl-portable
+    
+    cp -a /tmp/etc /tmp/opt /tmp/usr /home/$SUDO_USER/.amdgpu-progl-portable
+    
+    rm -rf /tmp/etc /tmp/opt /tmp/usr
+    
+}
+
+patchResolve()
+{
+
+	isCLInstalled=$(dnf repolist enabled | grep sukhmeet:amdgpu-core | wc -c)
+	if [[ $isCLInstalled != 0 ]]; then
+		echo "Proprietary OpenCL is installed, proceeding to Resolve patching..."
+	else
+		echo "OpenCL has not been installed yet. Please select options 1 or 2..."
+		menu
+		return
+	fi
+	
+	if [[ -d /home/$SUDO_USER/.amdgpu-progl-portable ]]; then
+		echo "Portable ProGL is installed, proceeding to Resolve patching..."
+	else
+		echo "Portable ProGL has not been installed yet, installing before patching Resolve..."
+		installPortableGL
+	fi
+		
+	
+    resolveBinary=/opt/resolve/bin/resolve
+    desktopFile=/usr/share/applications/com.blackmagicdesign.resolve.desktop
+
+    if [ -f "$resolveBinary" ]; then
+        echo "Davinci Resolve appears to be installed"
+        if [[ -f "$desktopFile" ]]; then
+            echo "Backing up .desktop file to $desktopFile.bak"
+            sudo cp $desktopFile $desktopFile.bak
+            echo "Patching .desktop file at $desktopFile"
+            sed -i 's|Exec=.*|Exec=bash -c "LD_LIBRARY_PATH=\"/home/'$SUDO_USER'/.amdgpu-progl-portable/opt/amdgpu-pro/lib64:\${LD_LIBRARY_PATH}\" LIBGL_DRIVERS_PATH=\"/home/'$SUDO_USER'/.amdgpu-progl-portable/usr/lib64/dri/\" dri_driver=\"amdgpu\" QT_DEVICE_PIXEL_RATIO=1 QT_AUTO_SCREEN_SCALE_FACTOR=false /opt/resolve/bin/resolve"|g' '/usr/share/applications/com.blackmagicdesign.resolve.desktop'
+            echo "Patching Davinci Resolve audio delay bug..."
+            sudo dnf install alsa-plugins-pulseaudio
+            echo "Done!"
+	while true; do
+            read -p "Do you want to patch Resolve for Hi-DPI scaling? [y/n]: " yn
+            case $yn in
+                [Yy]* ) echo "Patching for hidpi"; sudo sed -i 's|QT_DEVICE_PIXEL_RATIO=1 QT_AUTO_SCREEN_SCALE_FACTOR=false|QT_DEVICE_PIXEL_RATIO=2 QT_AUTO_SCREEN_SCALE_FACTOR=true|g' /usr/share/applications/com.blackmagicdesign.resolve.desktop; break;;
+                [Nn]* ) echo "Not patching"; exit;;
+                * ) echo "Please answer y or n";;
+            esac
+        done
+        else
+            echo "Could not locate Davinci Resolve desktop file at $desktopFile. This is not a supported configuration."
+        fi
+    else 
+        echo "Error: $resolveBinary was not found. Has Davinci Resolve been installed yet?"
+        if [[ -f "$desktopFile" ]]; then
+            echo "Found Desktop file for Davinci Resolve at $desktopFile, but the Resolve binary was not found. This is not a supported configuration"
+        else
+            echo "Error: Could not locate Davinci Resolve binary at $desktopFile. Has Davinci Resolve been installed yet?"
+        fi
+    fi        
 }
 
 installLatestRepo()
 {
-    getVersions
+    latestRHEL="$(getRHEL)"
+    latestDriverVersion="$(getDriver)"
     if [ $(ls -l /etc/yum.repos.d/ | grep -v rpmsave | grep amdgpu.repo | wc -l) == 0 ]; then
         RPM=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/${latestRHEL}/ | grep rpm | awk 'BEGIN{FS=">"} {print $2}' | awk 'BEGIN{FS="<"} {print $1}')
         echo "Installing amdgpu-install"
@@ -112,12 +228,23 @@ uninstallOpenCL()
 	fi
 }
 
+uninstallProGL()
+{
+	desktopFile=/usr/share/applications/com.blackmagicdesign.resolve.desktop
+	rm -rf /home/$SUDO_USER/.amdgpu-progl-portable
+	if [[ -f $desktopFile.bak ]]; then
+		echo "Restoring Davinci Resolve .desktop file..."
+		sudo rm $desktopFile
+		sudo cp $desktopFile.bak $desktopFile && sudo chmod 755 $desktopFile && sudo rm $desktopFile.bak
+	fi
+}
+
 menu()
 {
-	echo "Legacy Drivers are are required for Arctic Islands/Polaris"
-	echo "Latest Drivers work with Vega and Above"
+	printf "\nLegacy Drivers are are required for Arctic Islands/Polaris\n"
+	printf "Latest Drivers work with Vega and Above\n\n"
     PS3='Enter Option Number: '
-    options=("Install-OpenCL-Latest" "Install-OpenCL-Legacy" "Install-HIP-Latest" "Uninstall" "Quit")
+    options=("Install-OpenCL-Latest" "Install-OpenCL-Legacy" "Install-HIP-Latest" "Install-Portable-ProGL" "Patch-Davinci-Resolve" "Uninstall-OpenCL" "Uninstall-ProGL" "Quit")
     select opt in "${options[@]}"
     do
         case $opt in
@@ -132,14 +259,30 @@ menu()
              	yesno
              	break
                 ;;
+            "Install-Portable-ProGL")
+                echo "Installing Portable ProGL"
+		installPortableGL
+                break
+                ;;
+            "Patch-Davinci-Resolve")
+                echo "Patching Resolve .desktop file"
+		patchResolve
+                break
+                ;;
             "Install-HIP-Latest")
                 echo "(WIP) For Testing Purposes"
                 installLatestHIP
                 break
-                ;;
-            "Uninstall")
+                ;;                
+            "Uninstall-OpenCL")
                 echo "Uninstalling OpenCL Stack"
                 uninstallOpenCL
+                echo "Uninstall Successful"
+                break
+                ;;
+            "Uninstall-ProGL")
+                echo "Uninstalling Portable ProGL Stack"
+                uninstallProGL
                 echo "Uninstall Successful"
                 break
                 ;;
