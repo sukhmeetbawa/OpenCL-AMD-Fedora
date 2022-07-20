@@ -4,7 +4,7 @@ OpenCL userspace driver as provided in the amdgpu-pro driver stack. This package
 
 Other functionality includes `Portable-ProGL`, a portable configuration of the proprietary OpenGL stack from `amdgpu-pro`. This allows the system to retain the standard, better performing free openGL stack, while also allowing users to configure applications to use the `amdgpu-pro` version of OpenGL.
 
-`Patch-Davinci-Resolve` will patch Davinci Resolve to use `Portable-ProGL`, as well as fix an audio delay bug by installing `alsa-plugins-pulseaudio` if it's not already installed. If your only goal is to run Resolve, this function is pretty much your one-click (one keyboard press?) solution for the woes that come with Resolve + an AMD GPU on Linux.
+`Patch-Davinci-Resolve` will patch Davinci Resolve to use `Portable-ProGL`, as well as fix an audio delay bug by installing `alsa-plugins-pulseaudio` if it's not already installed. If your only goal is to run Resolve, this function is pretty much your one-click (one keyboard press?) solution for the woes that come with Resolve + an AMD GPU on Fedora.
 
 `Install-HIP-Latest` will install the latest version of HIP (Heterogeneous-Compute Interface for Portability). Somewhat experimental with this script.
 
