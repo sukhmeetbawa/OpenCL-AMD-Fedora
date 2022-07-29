@@ -8,79 +8,32 @@ rootCheck()
         exit $?
     fi
 }
-
-getRHEL()
-{
-	#Check the repo for the latest supported RHEL version and save it as a variable
-	echo $(curl http://repo.radeon.com/amdgpu-install/latest/rhel/ | grep href | tail -1 | sed 's/.*\/">//; s/\/<\/a.*//')
-}
-
-getDriver()
-{
-	#Check the repo for the latest version of the driver and save it as a variable
-	echo $(curl http://repo.radeon.com/amdgpu-install/ | grep href | tail -2 | head -1 | sed 's/.*\/">//; s/\/<\/a.*//')
-
-}
-
-webScrape()
-{
-	latestRHEL="$(getRHEL)"
-	latestDriverVersion="$(getDriver)"
-	echo $(grep '<a href="'$1'-'$latestDriverVersion /tmp/amdDriverPageTMP | sed 's|.*">||; s|<\/a>.*||')
-}
-
-downloadWGET()
-{
-	latestRHEL="$(getRHEL)"
-	latestDriverVersion="$(getDriver)"
-	sudo wget -q -c -P /tmp --show-progress https://repo.radeon.com/amdgpu/latest/rhel/${latestRHEL}/proprietary/x86_64/$1
-}
+# Environment Variables Required
+latestRHEL="$(echo $(curl http://repo.radeon.com/amdgpu-install/latest/rhel/ --silent | grep href | tail -1 | sed 's/.*\/">//; s/\/<\/a.*//'))"
+latestDriverVersion="$(echo $(curl http://repo.radeon.com/amdgpu-install/ --silent | grep href | tail -2 | head -1 | sed 's/.*\/">//; s/\/<\/a.*//'))"
 
 installPortableGL()
 {
-    latestRHEL="$(getRHEL)"
-    latestDriverVersion="$(getDriver)"
     echo "Downloading Dependencies"
     dnf install cpio
+    echo "Enabling Proprietary AMD Repository"
+	sed -i 's/enabled=0/enabled=1/g' /etc/yum.repos.d/amdgpu-proprietary.repo
     echo "Downloading Drivers"
-    curl --progress-bar http://repo.radeon.com/amdgpu/latest/rhel/${latestRHEL}/proprietary/x86_64/ > /tmp/amdDriverPageTMP
-    
-    libEGL=$(webScrape "libegl-amdgpu-pro")
-    libGL=$(webScrape "libgl-amdgpu-pro")
-    libGLDRI=$(webScrape "libgl-amdgpu-pro-dri")
-    libGLEXT=$(webScrape "libgl-amdgpu-pro-ext")
-    libGLAPI=$(webScrape "libglapi-amdgpu-pro")
-    libGLES=$(webScrape "libgles-amdgpu-pro")
-    
-    downloadWGET $libEGL
-    downloadWGET $libGL
-    downloadWGET $libGLDRI
-    downloadWGET $libGLEXT
-    downloadWGET $libGLAPI
-    downloadWGET $libGLES
-    
-    (cd /tmp && 
-    rpm2cpio $libEGL | cpio -idmv
-    rpm2cpio $libGL | cpio -idmv
-    rpm2cpio $libGLDRI | cpio -idmv
-    rpm2cpio $libGLEXT | cpio -idmv
-    rpm2cpio $libGLAPI | cpio -idmv
-    rpm2cpio $libGLES | cpio -idmv)
-    
-    rm -f /tmp/$libEGL /tmp/$libGL /tmp/$libGLDRI /tmp/$libGLEXT /tmp/$libGLAPI /tmp/$libGLES /tmp/amdDriverPageTMP
-    
+    dnf install --downloadonly libegl-amdgpu-pro libgl-amdgpu-pro libgl-amdgpu-pro-dri libgl-amdgpu-pro-ext libglapi-amdgpu-pro libgles-amdgpu-pro --destdir=/tmp/amdDriverCache -y    
+    cd /tmp/amdDriverCache
+    for rpm in *rpm; do  
+    	rpm2cpio "$rpm" | cpio -idm
+    done
     mkdir -p /home/$SUDO_USER/.amdgpu-progl-portable
-    chmod -R 777 /home/$SUDO_USER/.amdgpu-progl-portable
-    
-    cp -a /tmp/etc /tmp/opt /tmp/usr /home/$SUDO_USER/.amdgpu-progl-portable
-    
-    rm -rf /tmp/etc /tmp/opt /tmp/usr
-    
+    chmod -R 755 /home/$SUDO_USER/.amdgpu-progl-portable
+    cp -a /tmp/amdDriverCache/etc /tmp/amdDriverCache/opt /tmp/amdDriverCache/usr /home/$SUDO_USER/.amdgpu-progl-portable
+    echo "ProGL Installed for User"
+    echo "Clean Download Cache"
+    rm -rf /tmp/amdDriverCache
 }
 
 patchResolve()
 {
-
 	isCLInstalled=$(dnf repolist enabled | grep sukhmeet:amdgpu-core | wc -c)
 	if [[ $isCLInstalled != 0 ]]; then
 		echo "Proprietary OpenCL is installed, proceeding to Resolve patching..."
@@ -96,8 +49,6 @@ patchResolve()
 		echo "Portable ProGL has not been installed yet, installing before patching Resolve..."
 		installPortableGL
 	fi
-		
-	
     resolveBinary=/opt/resolve/bin/resolve
     desktopFile=/usr/share/applications/com.blackmagicdesign.resolve.desktop
 
@@ -134,8 +85,7 @@ patchResolve()
 
 installLatestRepo()
 {
-    latestRHEL="$(getRHEL)"
-    latestDriverVersion="$(getDriver)"
+   
     if [ $(ls -l /etc/yum.repos.d/ | grep -v rpmsave | grep amdgpu.repo | wc -l) == 0 ]; then
         RPM=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/${latestRHEL}/ | grep rpm | awk 'BEGIN{FS=">"} {print $2}' | awk 'BEGIN{FS="<"} {print $1}')
         echo "Installing amdgpu-install"
