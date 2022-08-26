@@ -17,7 +17,7 @@ installPortableGL()
     echo "Downloading Dependencies"
     dnf install cpio
     echo "Enabling Proprietary AMD Repository"
-	sed -i 's/enabled=0/enabled=1/g' /etc/yum.repos.d/amdgpu-proprietary.repo
+	sed -i 's/enabled=0/enabled=1/g' /etc/yum.repos.d/amdgpu.repo
     echo "Downloading Drivers"
     dnf install --downloadonly libegl-amdgpu-pro libgl-amdgpu-pro libgl-amdgpu-pro-dri libgl-amdgpu-pro-ext libglapi-amdgpu-pro libgles-amdgpu-pro --destdir=/tmp/amdDriverCache -y    
     cd /tmp/amdDriverCache
