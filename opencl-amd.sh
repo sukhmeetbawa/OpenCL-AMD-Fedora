@@ -8,10 +8,6 @@ rootCheck()
         exit $?
     fi
 }
-# Environment Variables Required
-latestRHEL="$(echo $(curl http://repo.radeon.com/amdgpu-install/latest/rhel/ --silent | grep href | tail -1 | sed 's/.*\/">//; s/\/<\/a.*//'))"
-latestDriverVersion="$(echo $(curl http://repo.radeon.com/amdgpu-install/ --silent | grep href | tail -2 | head -1 | sed 's/.*\/">//; s/\/<\/a.*//'))"
-
 installPortableGL()
 {
     echo "Downloading Dependencies"
@@ -19,9 +15,9 @@ installPortableGL()
     echo "Enabling Proprietary AMD Repository"
 	sed -i 's/enabled=0/enabled=1/g' /etc/yum.repos.d/amdgpu-proprietary.repo
     echo "Downloading Drivers"
-    dnf install --downloadonly libegl-amdgpu-pro libgl-amdgpu-pro libgl-amdgpu-pro-dri libgl-amdgpu-pro-ext libglapi-amdgpu-pro libgles-amdgpu-pro --destdir=/tmp/amdDriverCache -y    
+    dnf install --downloadonly libegl-amdgpu-pro libgl-amdgpu-pro libgl-amdgpu-pro-dri libgl-amdgpu-pro-ext libglapi-amdgpu-pro libgles-amdgpu-pro --destdir=/tmp/amdDriverCache -y
     cd /tmp/amdDriverCache
-    for rpm in *rpm; do  
+    for rpm in *rpm; do
     	rpm2cpio "$rpm" | cpio -idm
     done
     mkdir -p /home/$SUDO_USER/.amdgpu-progl-portable
@@ -42,7 +38,6 @@ patchResolve()
 		menu
 		return
 	fi
-	
 	if [[ -d /home/$SUDO_USER/.amdgpu-progl-portable ]]; then
 		echo "Portable ProGL is installed, proceeding to Resolve patching..."
 	else
@@ -73,19 +68,18 @@ patchResolve()
         else
             echo "Could not locate Davinci Resolve desktop file at $desktopFile. This is not a supported configuration."
         fi
-    else 
+    else
         echo "Error: $resolveBinary was not found. Has Davinci Resolve been installed yet?"
         if [[ -f "$desktopFile" ]]; then
             echo "Found Desktop file for Davinci Resolve at $desktopFile, but the Resolve binary was not found. This is not a supported configuration"
         else
             echo "Error: Could not locate Davinci Resolve binary at $desktopFile. Has Davinci Resolve been installed yet?"
         fi
-    fi        
+    fi
 }
 
 installLatestRepo()
 {
-   
     if [ $(ls -l /etc/yum.repos.d/ | grep -v rpmsave | grep amdgpu.repo | wc -l) == 0 ]; then
         RPM=$(curl --silent http://repo.radeon.com/amdgpu-install/latest/rhel/${latestRHEL}/ | grep rpm | awk 'BEGIN{FS=">"} {print $2}' | awk 'BEGIN{FS="<"} {print $1}')
         echo "Installing amdgpu-install"
@@ -148,7 +142,7 @@ installLatestHIP(){
     dnf copr enable sukhmeet/amdgpu-core-shim -y &> /dev/null
     dnf install platform-python-shim -y
     echo "Installing HIP Runtime"
-    sudo dnf install rocm-hip-runtime -y
+    sudo dnf install amdgpu-core-shim hip-runtime-amd --exclude=rocm-llvm -y
 }
 
 yesno()
@@ -189,12 +183,17 @@ uninstallProGL()
 	fi
 }
 
+uninstallHIP()
+{
+	echo "Uninstalling Packages"
+	dnf remove hip-runtime-amd -y
+}
 menu()
 {
 	printf "\nLegacy Drivers are are required for Arctic Islands/Polaris\n"
 	printf "Latest Drivers work with Vega and Above\n\n"
     PS3='Enter Option Number: '
-    options=("Install-OpenCL-Latest" "Install-OpenCL-Legacy" "Install-HIP-Latest" "Install-Portable-ProGL" "Patch-Davinci-Resolve" "Uninstall-OpenCL" "Uninstall-ProGL" "Quit")
+    options=("Install-OpenCL-Latest" "Install-OpenCL-Legacy" "Install-HIP-Runtime" "Install-Portable-ProGL" "Patch-Davinci-Resolve" "Uninstall-OpenCL" "Uninstall-ProGL" "Uninstall-HIP-Runtime" "Quit")
     select opt in "${options[@]}"
     do
         case $opt in
@@ -219,11 +218,11 @@ menu()
 		patchResolve
                 break
                 ;;
-            "Install-HIP-Latest")
+            "Install-HIP-Runtime")
                 echo "(WIP) For Testing Purposes"
                 installLatestHIP
                 break
-                ;;                
+                ;;
             "Uninstall-OpenCL")
                 echo "Uninstalling OpenCL Stack"
                 uninstallOpenCL
@@ -236,6 +235,12 @@ menu()
                 echo "Uninstall Successful"
                 break
                 ;;
+	   "Uninstall-HIP-Runtime")
+		echo "Uninstalling HIP Runtime"
+		uninstallHIP
+		echo "Uninstall Successful"
+		break
+		;;
             "Quit")
                 break
                 ;;
@@ -244,7 +249,9 @@ menu()
     done
 
 }
-
 #Driver Code
 rootCheck
+# Environment Variables Required
+latestRHEL="$(echo $(curl http://repo.radeon.com/amdgpu-install/latest/rhel/ --silent | grep href | tail -1 | sed 's/.*\/">//; s/\/<\/a.*//'))"
+latestDriverVersion="$(echo $(curl http://repo.radeon.com/amdgpu-install/ --silent | grep href | tail -2 | head -1 | sed 's/.*\/">//; s/\/<\/a.*//'))"
 menu
