@@ -103,7 +103,7 @@ installLatestOpenCL()
     dnf copr enable sukhmeet/amdgpu-core-shim -y &> /dev/null
     dnf install amdgpu-core-shim -y
     echo "Installing OpenCL Runtime"
-    dnf install rocm-opencl -y
+    dnf install rocm-opencl rocm-runtime -y
 }
 
 installLegacyOpenCL()
