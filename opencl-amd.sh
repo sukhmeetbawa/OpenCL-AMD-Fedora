@@ -12,8 +12,10 @@ installPortableGL()
 {
     echo "Downloading Dependencies"
     dnf install cpio
-    echo "Enabling Proprietary AMD Repository"
+    if [ "$(ls /etc/yum.repos.d/ | grep amdgpu-proprietary.repo | wc -l)" -gt 0 ]; then
+		echo "Enabling Proprietary AMD Repository"
 	sed -i 's/enabled=0/enabled=1/g' /etc/yum.repos.d/amdgpu-proprietary.repo
+    fi
     echo "Downloading Drivers"
     dnf install --downloadonly libegl-amdgpu-pro libgl-amdgpu-pro libgl-amdgpu-pro-dri libgl-amdgpu-pro-ext libglapi-amdgpu-pro libgles-amdgpu-pro --destdir=/tmp/amdDriverCache -y
     cd /tmp/amdDriverCache
@@ -103,6 +105,7 @@ installLatestOpenCL()
     dnf copr enable sukhmeet/amdgpu-core-shim -y &> /dev/null
     dnf install amdgpu-core-shim -y
     echo "Installing OpenCL Runtime"
+    dnf install https://download.copr.fedorainfracloud.org/results/sukhmeet/ncurses/fedora-37-x86_64/05151942-ncurses/ncurses-compat-libs-6.3-3.20220501.fc37.x86_64.rpm -y
     dnf install rocm-opencl rocm-runtime -y
 }
 
@@ -141,8 +144,9 @@ installLatestHIP(){
     installLatestRepo
     dnf copr enable sukhmeet/amdgpu-core-shim -y &> /dev/null
     dnf install platform-python-shim -y
+    dnf install https://download.copr.fedorainfracloud.org/results/sukhmeet/ncurses/fedora-37-x86_64/05151942-ncurses/ncurses-compat-libs-6.3-3.20220501.fc37.x86_64.rpm -y
     echo "Installing HIP Runtime"
-    sudo dnf install amdgpu-core-shim hip-runtime-amd --exclude=rocm-llvm -y
+    sudo amdgpu-install --usecase=hip --no-dkms --no-32 -y
 }
 
 yesno()
